@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🌍 Světový kvíz: Vlajky, hlavní města & Trofeje</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --card-hover: #334155;
+    --accent: #3b82f6;
+    --accent-hover: #2563eb;
+    --text: #f8fafc;
+    --muted: #94a3b8;
+    --ok: #16a34a;
+    --bad: #dc2626;
+    --gold: #f59e0b;
+  }
+  * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+  body {
+    margin: 0; min-height: 100vh; background: radial-gradient(circle at top, #1e293b, #0f172a);
+    color: var(--text); display: flex; align-items: center; justify-content: center; padding: 16px;
+  }
+  .app {
+    width: 100%; max-width: 760px; background: var(--card); border-radius: 24px;
+    padding: 26px; box-shadow: 0 20px 50px rgba(0,0,0,0.45); border: 1px solid rgba(255,255,255,0.08);
+    position: relative; overflow: hidden;
+  }
+  h1 { margin: 0 0 6px; font-size: 1.75rem; text-align: center; }
+  .subtitle { text-align: center; color: var(--muted); margin-bottom: 18px; font-size: 0.95rem; }
+
+  /* Statistiky na úvodní obrazovce */
+  .stats-bar {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+    background: #0f172a; padding: 12px; border-radius: 16px; margin-bottom: 18px;
+    border: 1px solid #334155; text-align: center;
+  }
+  .stat-val { font-size: 1.25rem; font-weight: 800; color: #60a5fa; }
+  .stat-lbl { font-size: 0.78rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+
+  .section-label { font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.06em; color: #60a5fa; font-weight: 700; margin: 14px 0 8px; }
+  .grid-btns { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+  .pill {
+    background: #0f172a; border: 2px solid #334155; color: var(--text); padding: 10px 12px;
+    border-radius: 14px; cursor: pointer; font-weight: 600; font-size: 0.9rem; transition: 0.15s;
+  }
+  .pill:hover { border-color: #60a5fa; }
+  .pill.active { background: rgba(59, 130, 246, 0.2); border-color: var(--accent); color: #93c5fd; }
+
+  .menu-actions { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; margin-top: 20px; }
+  .start-btn, .trophy-btn, .next-btn {
+    padding: 15px; border: none; border-radius: 16px; font-size: 1.05rem; font-weight: 700; cursor: pointer; transition: 0.15s;
+  }
+  .start-btn, .next-btn { background: var(--accent); color: white; }
+  .start-btn:hover, .next-btn:hover { background: var(--accent-hover); transform: translateY(-1px); }
+  .next-btn { width: 100%; margin-top: 16px; }
+  .trophy-btn { background: #0f172a; color: #fbbf24; border: 2px solid #b45309; }
+  .trophy-btn:hover { background: rgba(245, 158, 11, 0.15); }
+
+  /* Herní lišta */
+  .top-bar { display: flex; justify-content: space-between; align-items: center; font-weight: 700; margin-bottom: 10px; gap: 8px; flex-wrap: wrap; }
+  .badge { background: rgba(96, 165, 250, 0.15); color: #60a5fa; padding: 6px 12px; border-radius: 999px; font-size: 0.88rem; }
+  .streak-badge { background: rgba(245, 158, 11, 0.18); color: #fbbf24; padding: 6px 12px; border-radius: 999px; font-size: 0.88rem; }
+  .lives-badge { background: rgba(239, 68, 68, 0.18); color: #f87171; padding: 6px 12px; border-radius: 999px; font-size: 0.95rem; letter-spacing: 2px; }
+
+  .progress-wrap { width: 100%; height: 10px; background: #0f172a; border-radius: 999px; overflow: hidden; margin-bottom: 20px; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, #3b82f6, #38bdf8); width: 0%; transition: width 0.3s ease; }
+
+  .question-box { text-align: center; margin-bottom: 20px; }
+  .flag-img {
+    width: 190px; height: 126px; object-fit: cover; border-radius: 14px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4); border: 2px solid rgba(255,255,255,0.15); margin-bottom: 12px;
+  }
+  .q-prompt { color: var(--muted); font-size: 0.98rem; margin-bottom: 4px; }
+  .q-target { font-size: 1.8rem; font-weight: 800; letter-spacing: 0.02em; }
+
+  .answers { display: grid; gap: 10px; }
+  .ans-btn {
+    background: #0f172a; border: 2px solid #334155; color: var(--text); padding: 14px 18px;
+    border-radius: 16px; font-size: 1.02rem; font-weight: 600; cursor: pointer; text-align: left;
+    display: flex; align-items: center; gap: 12px; transition: 0.15s;
+  }
+  .ans-btn:hover:not(:disabled) { border-color: #60a5fa; background: var(--card-hover); }
+  .ans-btn:disabled { cursor: default; }
+  .ans-btn.correct { background: var(--ok); border-color: #4ade80; color: white; }
+  .ans-btn.wrong { background: var(--bad); border-color: #f87171; color: white; }
+  .letter {
+    width: 30px; height: 30px; border-radius: 8px; background: rgba(255,255,255,0.1);
+    display: inline-flex; align-items: center; justify-content: center; font-weight: 800; flex-shrink: 0;
+  }
+  .feedback { text-align: center; font-size: 1.12rem; font-weight: 700; min-height: 26px; margin-top: 14px; }
+  .hidden { display: none !important; }
+
+  /* Výsledky & Trofeje */
+  .result-score { font-size: 2.8rem; font-weight: 800; text-align: center; color: #4ade80; margin: 8px 0; }
+  .result-meta { text-align: center; color: var(--muted); font-size: 1rem; margin-bottom: 16px; }
+  .record-banner {
+    background: linear-gradient(90deg, rgba(245,158,11,0.2), rgba(234,179,8,0.1));
+    border: 1px solid #f59e0b; color: #fde68a; text-align: center;
+    padding: 10px; border-radius: 12px; font-weight: 700; margin-bottom: 14px;
+  }
+  .unlocked-box {
+    background: rgba(22, 163, 74, 0.15); border: 1px solid #22c55e; border-radius: 16px;
+    padding: 12px 16px; margin-bottom: 16px;
+  }
+  .unlocked-title { color: #4ade80; font-weight: 800; font-size: 0.95rem; margin-bottom: 8px; }
+
+  .trophies-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; max-height: 400px; overflow-y: auto; padding-right: 4px; }
+  .trophy-card {
+    background: #0f172a; border: 2px solid #334155; border-radius: 16px; padding: 12px;
+    display: flex; align-items: center; gap: 12px; transition: 0.2s;
+  }
+  .trophy-card.unlocked { border-color: #f59e0b; background: linear-gradient(145deg, #1e293b, #0f172a); }
+  .trophy-card.locked { opacity: 0.48; filter: grayscale(0.8); }
+  .trophy-icon { font-size: 2rem; flex-shrink: 0; }
+  .trophy-name { font-weight: 700; font-size: 0.95rem; color: #f8fafc; }
+  .trophy-desc { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+
+  .mistakes-list { background: #0f172a; border-radius: 16px; padding: 12px 16px; max-height: 180px; overflow-y: auto; }
+  .mistake-item { padding: 7px 0; border-bottom: 1px solid #1e293b; display: flex; align-items: center; gap: 10px; font-size: 0.92rem; }
+  .mistake-item:last-child { border-bottom: none; }
+  .mini-flag { width: 32px; height: 22px; object-fit: cover; border-radius: 4px; flex-shrink: 0; }
+
+  /* Konfety */
+  .confetti {
+    position: fixed; width: 10px; height: 10px; top: -10px; z-index: 999;
+    animation: fall 3s linear forwards; border-radius: 2px;
+  }
+  @keyframes fall {
+    to { transform: translateY(105vh) rotate(720deg); opacity: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- ÚVODNÍ OBRAZOVKA -->
+  <div id="screen-start">
+    <h1>🌍 Svět: Vlajky & Hlavní města</h1>
+    <div class="subtitle">Sbírej odznaky, překonávej rekordy a ovládni všech 195 států!</div>
+
+    <div class="stats-bar">
+      <div><div class="stat-val" id="stat-total">0</div><div class="stat-lbl">Správných odpovědí</div></div>
+      <div><div class="stat-val" id="stat-streak">0 🔥</div><div class="stat-lbl">Nejdelší série</div></div>
+      <div><div class="stat-val" id="stat-trophies">0 / 12</div><div class="stat-lbl">Odemčené trofeje</div></div>
+    </div>
+
+    <div class="section-label">1. Herní režim</div>
+    <div class="grid-btns" id="mode-group">
+      <button class="pill active" data-val="mix">🎲 Mix (Města i Vlajky)</button>
+      <button class="pill" data-val="capitals">🏛️ Hlavní města</button>
+      <button class="pill" data-val="flags">🚩 Poznej vlajku</button>
+    </div>
+
+    <div class="section-label">2. Světadíl / Oblast</div>
+    <div class="grid-btns" id="region-group">
+      <button class="pill active" data-val="ALL">🌐 Celý svět (195)</button>
+      <button class="pill" data-val="Evropa">🏰 Evropa (44)</button>
+      <button class="pill" data-val="Asie">🏯 Asie (48)</button>
+      <button class="pill" data-val="Afrika">🦁 Afrika (54)</button>
+      <button class="pill" data-val="Severní a Střední Amerika">🗽 Sev. a Stř. Amerika (10)</button>
+      <button class="pill" data-val="Karibik">🏝️ Karibik (13)</button>
+      <button class="pill" data-val="Jižní Amerika">🦙 Jižní Amerika (12)</button>
+      <button class="pill" data-val="Austrálie a Oceánie">🦘 Oceánie (14)</button>
+    </div>
+
+    <div class="section-label">3. Délka / Výzva</div>
+    <div class="grid-btns" id="count-group">
+      <button class="pill active" data-val="15">⚡ Rychlovka (15)</button>
+      <button class="pill" data-val="30">🎯 Střední (30)</button>
+      <button class="pill" data-val="MAX">🏆 Celá oblast</button>
+      <button class="pill" data-val="SURVIVAL">❤️❤️❤️ Na 3 životy</button>
+    </div>
+
+    <div class="menu-actions">
+      <button class="start-btn" onclick="startQuiz()">Spustit kvíz 🚀</button>
+      <button class="trophy-btn" onclick="openTrophies()">🏆 Trofeje</button>
+    </div>
+  </div>
+
+  <!-- HERNÍ OBRAZOVKA -->
+  <div id="screen-quiz" class="hidden">
+    <div class="top-bar">
+      <span class="badge" id="q-region">Oblast</span>
+      <span id="q-counter">1 / 15</span>
+      <span class="lives-badge hidden" id="q-lives">❤️❤️❤️</span>
+      <span class="streak-badge" id="q-streak">🔥 0</span>
+      <span class="badge" id="q-score">Skóre: 0</span>
+    </div>
+    <div class="progress-wrap"><div class="progress-fill" id="progress-fill"></div></div>
+
+    <div class="question-box">
+      <img id="q-flag" class="flag-img" src="" alt="Vlajka">
+      <div class="q-prompt" id="q-prompt">Jaké je hlavní město tohoto státu?</div>
+      <div class="q-target" id="q-target">Česko</div>
+    </div>
+
+    <div class="answers" id="answers-box"></div>
+    <div class="feedback" id="feedback"></div>
+    <button class="next-btn hidden" id="next-btn" onclick="nextQuestion()">Další otázka ➔</button>
+  </div>
+
+  <!-- VÝSLEDKOVÁ OBRAZOVKA -->
+  <div id="screen-end" class="hidden">
+    <h1 id="end-title">🏆 Konec kvízu!</h1>
+    <div class="result-score" id="final-score">15 / 15</div>
+    <div class="result-meta" id="final-meta">Úspěšnost: 100 % • Čas: 01:12</div>
+
+    <div id="record-banner" class="record-banner hidden">⭐ NOVÝ OSOBNÍ REKORD V TÉTO OBLASTI! ⭐</div>
+
+    <div id="unlocked-box" class="unlocked-box hidden">
+      <div class="unlocked-title">🎉 Nově získaná ocenění:</div>
+      <div id="unlocked-list"></div>
+    </div>
+
+    <div id="mistakes-wrap" class="hidden">
+      <div class="section-label">Co ještě dopilovat:</div>
+      <div class="mistakes-list" id="mistakes-list"></div>
+    </div>
+
+    <div class="menu-actions">
+      <button class="start-btn" onclick="resetToMenu()">Zpět do menu 🔄</button>
+      <button class="trophy-btn" onclick="openTrophies()">🏆 Trofeje</button>
+    </div>
+  </div>
+
+  <!-- OBRAZOVKA TROFEJÍ -->
+  <div id="screen-trophies" class="hidden">
+    <h1>🏆 Síň slávy & Ocenění</h1>
+    <div class="subtitle" id="trophy-progress-txt">Odemčeno 0 z 12 odznaků</div>
+    <div class="trophies-grid" id="trophies-grid"></div>
+    <button class="start-btn" style="width:100%; margin-top:18px;" onclick="resetToMenu()">Zpět do hry ⬅️</button>
+  </div>
+</div>
+
+<script>
+const COUNTRIES = [
+  // EVROPA (44)
+  { region: "Evropa", code: "al", name: "Albánie", cap: "Tirana" },
+  { region: "Evropa", code: "ad", name: "Andorra", cap: "Andorra la Vella" },
+  { region: "Evropa", code: "be", name: "Belgie", cap: "Brusel" },
+  { region: "Evropa", code: "by", name: "Bělorusko", cap: "Minsk" },
+  { region: "Evropa", code: "ba", name: "Bosna a Hercegovina", cap: "Sarajevo" },
+  { region: "Evropa", code: "bg", name: "Bulharsko", cap: "Sofie" },
+  { region: "Evropa", code: "me", name: "Černá Hora", cap: "Podgorica" },
+  { region: "Evropa", code: "cz", name: "Česko", cap: "Praha" },
+  { region: "Evropa", code: "dk", name: "Dánsko", cap: "Kodaň" },
+  { region: "Evropa", code: "ee", name: "Estonsko", cap: "Tallinn" },
+  { region: "Evropa", code: "fi", name: "Finsko", cap: "Helsinky" },
+  { region: "Evropa", code: "fr", name: "Francie", cap: "Paříž" },
+  { region: "Evropa", code: "hr", name: "Chorvatsko", cap: "Záhřeb" },
+  { region: "Evropa", code: "ie", name: "Irsko", cap: "Dublin" },
+  { region: "Evropa", code: "is", name: "Island", cap: "Reykjavík" },
+  { region: "Evropa", code: "it", name: "Itálie", cap: "Řím" },
+  { region: "Evropa", code: "li", name: "Lichtenštejnsko", cap: "Vaduz" },
+  { region: "Evropa", code: "lt", name: "Litva", cap: "Vilnius" },
+  { region: "Evropa", code: "lv", name: "Lotyšsko", cap: "Riga" },
+  { region: "Evropa", code: "lu", name: "Lucembursko", cap: "Lucemburk" },
+  { region: "Evropa", code: "hu", name: "Maďarsko", cap: "Budapešť" },
+  { region: "Evropa", code: "mt", name: "Malta", cap: "Valletta" },
+  { region: "Evropa", code: "md", name: "Moldavsko", cap: "Kišiněv" },
+  { region: "Evropa", code: "mc", name: "Monako", cap: "Monako" },
+  { region: "Evropa", code: "de", name: "Německo", cap: "Berlín" },
+  { region: "Evropa", code: "nl", name: "Nizozemsko", cap: "Amsterdam" },
+  { region: "Evropa", code: "no", name: "Norsko", cap: "Oslo" },
+  { region: "Evropa", code: "pl", name: "Polsko", cap: "Varšava" },
+  { region: "Evropa", code: "pt", name: "Portugalsko", cap: "Lisabon" },
+  { region: "Evropa", code: "at", name: "Rakousko", cap: "Vídeň" },
+  { region: "Evropa", code: "ro", name: "Rumunsko", cap: "Bukurešť" },
+  { region: "Evropa", code: "ru", name: "Rusko", cap: "Moskva" },
+  { region: "Evropa", code: "gr", name: "Řecko", cap: "Athény" },
+  { region: "Evropa", code: "sm", name: "San Marino", cap: "San Marino" },
+  { region: "Evropa", code: "mk", name: "Severní Makedonie", cap: "Skopje" },
+  { region: "Evropa", code: "sk", name: "Slovensko", cap: "Bratislava" },
+  { region: "Evropa", code: "si", name: "Slovinsko", cap: "Lublaň" },
+  { region: "Evropa", code: "gb", name: "Spojené království", cap: "Londýn" },
+  { region: "Evropa", code: "rs", name: "Srbsko", cap: "Bělehrad" },
+  { region: "Evropa", code: "es", name: "Španělsko", cap: "Madrid" },
+  { region: "Evropa", code: "se", name: "Švédsko", cap: "Stockholm" },
+  { region: "Evropa", code: "ch", name: "Švýcarsko", cap: "Bern" },
+  { region: "Evropa", code: "ua", name: "Ukrajina", cap: "Kyjev" },
+  { region: "Evropa", code: "va", name: "Vatikán", cap: "Vatikán" },
+
+  // ASIE (48)
+  { region: "Asie", code: "af", name: "Afghánistán", cap: "Kábul" },
+  { region: "Asie", code: "am", name: "Arménie", cap: "Jerevan" },
+  { region: "Asie", code: "az", name: "Ázerbájdžán", cap: "Baku" },
+  { region: "Asie", code: "bh", name: "Bahrajn", cap: "Manáma" },
+  { region: "Asie", code: "bd", name: "Bangladéš", cap: "Dháka" },
+  { region: "Asie", code: "bt", name: "Bhútán", cap: "Thimbú" },
+  { region: "Asie", code: "bn", name: "Brunej", cap: "Bandar Seri Begawan" },
+  { region: "Asie", code: "cn", name: "Čína", cap: "Peking" },
+  { region: "Asie", code: "ph", name: "Filipíny", cap: "Manila" },
+  { region: "Asie", code: "ge", name: "Gruzie", cap: "Tbilisi" },
+  { region: "Asie", code: "in", name: "Indie", cap: "Nové Dillí" },
+  { region: "Asie", code: "id", name: "Indonésie", cap: "Jakarta" },
+  { region: "Asie", code: "iq", name: "Irák", cap: "Bagdád" },
+  { region: "Asie", code: "ir", name: "Írán", cap: "Teherán" },
+  { region: "Asie", code: "il", name: "Izrael", cap: "Jeruzalém" },
+  { region: "Asie", code: "jp", name: "Japonsko", cap: "Tokio" },
+  { region: "Asie", code: "ye", name: "Jemen", cap: "San'á" },
+  { region: "Asie", code: "kr", name: "Jižní Korea", cap: "Soul" },
+  { region: "Asie", code: "jo", name: "Jordánsko", cap: "Ammán" },
+  { region: "Asie", code: "kh", name: "Kambodža", cap: "Phnompenh" },
+  { region: "Asie", code: "qa", name: "Katar", cap: "Dauhá" },
+  { region: "Asie", code: "kz", name: "Kazachstán", cap: "Astana" },
+  { region: "Asie", code: "kw", name: "Kuvajt", cap: "Kuvajt" },
+  { region: "Asie", code: "cy", name: "Kypr", cap: "Nikósie" },
+  { region: "Asie", code: "kg", name: "Kyrgyzstán", cap: "Biškek" },
+  { region: "Asie", code: "la", name: "Laos", cap: "Vientiane" },
+  { region: "Asie", code: "lb", name: "Libanon", cap: "Bejrút" },
+  { region: "Asie", code: "my", name: "Malajsie", cap: "Kuala Lumpur" },
+  { region: "Asie", code: "mv", name: "Maledivy", cap: "Male" },
+  { region: "Asie", code: "mn", name: "Mongolsko", cap: "Ulánbátar" },
+  { region: "Asie", code: "mm", name: "Myanmar", cap: "Neipyijto" },
+  { region: "Asie", code: "np", name: "Nepál", cap: "Káthmándú" },
+  { region: "Asie", code: "om", name: "Omán", cap: "Maskat" },
+  { region: "Asie", code: "pk", name: "Pákistán", cap: "Islámábád" },
+  { region: "Asie", code: "sa", name: "Saúdská Arábie", cap: "Rijád" },
+  { region: "Asie", code: "kp", name: "Severní Korea", cap: "Pchjongjang" },
+  { region: "Asie", code: "sg", name: "Singapur", cap: "Singapur" },
+  { region: "Asie", code: "ae", name: "Spojené arabské emiráty", cap: "Abú Zabí" },
+  { region: "Asie", code: "lk", name: "Šrí Lanka", cap: "Šrí Džajavardanapura Kotte" },
+  { region: "Asie", code: "sy", name: "Sýrie", cap: "Damašek" },
+  { region: "Asie", code: "tj", name: "Tádžikistán", cap: "Dušanbe" },
+  { region: "Asie", code: "th", name: "Thajsko", cap: "Bangkok" },
+  { region: "Asie", code: "tr", name: "Turecko", cap: "Ankara" },
+  { region: "Asie", code: "tm", name: "Turkmenistán", cap: "Ašchabad" },
+  { region: "Asie", code: "uz", name: "Uzbekistán", cap: "Taškent" },
+  { region: "Asie", code: "vn", name: "Vietnam", cap: "Hanoj" },
+  { region: "Asie", code: "tl", name: "Východní Timor", cap: "Dili" },
+  { region: "Asie", code: "ps", name: "Palestina", cap: "Ramalláh" },
+
+  // AFRIKA (54)
+  { region: "Afrika", code: "dz", name: "Alžírsko", cap: "Alžír" },
+  { region: "Afrika", code: "ao", name: "Angola", cap: "Luanda" },
+  { region: "Afrika", code: "bj", name: "Benin", cap: "Porto-Novo" },
+  { region: "Afrika", code: "bw", name: "Botswana", cap: "Gaborone" },
+  { region: "Afrika", code: "bf", name: "Burkina Faso", cap: "Ouagadougou" },
+  { region: "Afrika", code: "bi", name: "Burundi", cap: "Gitega" },
+  { region: "Afrika", code: "td", name: "Čad", cap: "N'Djamena" },
+  { region: "Afrika", code: "dj", name: "Džibutsko", cap: "Džibuti" },
+  { region: "Afrika", code: "eg", name: "Egypt", cap: "Káhira" },
+  { region: "Afrika", code: "er", name: "Eritrea", cap: "Asmara" },
+  { region: "Afrika", code: "sz", name: "Eswatini", cap: "Mbabane" },
+  { region: "Afrika", code: "et", name: "Etiopie", cap: "Addis Abeba" },
+  { region: "Afrika", code: "ga", name: "Gabon", cap: "Libreville" },
+  { region: "Afrika", code: "gm", name: "Gambie", cap: "Banjul" },
+  { region: "Afrika", code: "gh", name: "Ghana", cap: "Accra" },
+  { region: "Afrika", code: "gn", name: "Guinea", cap: "Conakry" },
+  { region: "Afrika", code: "gw", name: "Guinea-Bissau", cap: "Bissau" },
+  { region: "Afrika", code: "za", name: "Jihoafrická republika", cap: "Pretorie" },
+  { region: "Afrika", code: "ss", name: "Jižní Súdán", cap: "Džuba" },
+  { region: "Afrika", code: "cm", name: "Kamerun", cap: "Yaoundé" },
+  { region: "Afrika", code: "cv", name: "Kapverdy", cap: "Praia" },
+  { region: "Afrika", code: "ke", name: "Keňa", cap: "Nairobi" },
+  { region: "Afrika", code: "km", name: "Komory", cap: "Moroni" },
+  { region: "Afrika", code: "cg", name: "Konžská republika", cap: "Brazzaville" },
+  { region: "Afrika", code: "cd", name: "Konžská demokratická republika", cap: "Kinshasa" },
+  { region: "Afrika", code: "ls", name: "Lesotho", cap: "Maseru" },
+  { region: "Afrika", code: "lr", name: "Libérie", cap: "Monrovia" },
+  { region: "Afrika", code: "ly", name: "Libye", cap: "Tripolis" },
+  { region: "Afrika", code: "mg", name: "Madagaskar", cap: "Antananarivo" },
+  { region: "Afrika", code: "mw", name: "Malawi", cap: "Lilongwe" },
+  { region: "Afrika", code: "ml", name: "Mali", cap: "Bamako" },
+  { region: "Afrika", code: "ma", name: "Maroko", cap: "Rabat" },
+  { region: "Afrika", code: "mu", name: "Mauricius", cap: "Port Louis" },
+  { region: "Afrika", code: "mr", name: "Mauritánie", cap: "Nuakšott" },
+  { region: "Afrika", code: "mz", name: "Mosambik", cap: "Maputo" },
+  { region: "Afrika", code: "na", name: "Namibie", cap: "Windhoek" },
+  { region: "Afrika", code: "ne", name: "Niger", cap: "Niamey" },
+  { region: "Afrika", code: "ng", name: "Nigérie", cap: "Abuja" },
+  { region: "Afrika", code: "ci", name: "Pobřeží slonoviny", cap: "Yamoussoukro" },
+  { region: "Afrika", code: "gq", name: "Rovníková Guinea", cap: "Malabo" },
+  { region: "Afrika", code: "rw", name: "Rwanda", cap: "Kigali" },
+  { region: "Afrika", code: "sn", name: "Senegal", cap: "Dakar" },
+  { region: "Afrika", code: "sc", name: "Seychely", cap: "Victoria" },
+  { region: "Afrika", code: "sl", name: "Sierra Leone", cap: "Freetown" },
+  { region: "Afrika", code: "so", name: "Somálsko", cap: "Mogadišo" },
+  { region: "Afrika", code: "cf", name: "Středoafrická republika", cap: "Bangui" },
+  { region: "Afrika", code: "sd", name: "Súdán", cap: "Chartúm" },
+  { region: "Afrika", code: "st", name: "Svatý Tomáš a Princův ostrov", cap: "São Tomé" },
+  { region: "Afrika", code: "tz", name: "Tanzanie", cap: "Dodoma" },
+  { region: "Afrika", code: "tg", name: "Togo", cap: "Lomé" },
+  { region: "Afrika", code: "tn", name: "Tunisko", cap: "Tunis" },
+  { region: "Afrika", code: "ug", name: "Uganda", cap: "Kampala" },
+  { region: "Afrika", code: "zm", name: "Zambie", cap: "Lusaka" },
+  { region: "Afrika", code: "zw", name: "Zimbabwe", cap: "Harare" },
+
+  // SEVERNÍ A STŘEDNÍ AMERIKA (10)
+  { region: "Severní a Střední Amerika", code: "us", name: "USA", cap: "Washington" },
+  { region: "Severní a Střední Amerika", code: "ca", name: "Kanada", cap: "Ottawa" },
+  { region: "Severní a Střední Amerika", code: "mx", name: "Mexiko", cap: "Mexico City" },
+  { region: "Severní a Střední Amerika", code: "bz", name: "Belize", cap: "Belmopan" },
+  { region: "Severní a Střední Amerika", code: "gt", name: "Guatemala", cap: "Ciudad de Guatemala" },
+  { region: "Severní a Střední Amerika", code: "hn", name: "Honduras", cap: "Tegucigalpa" },
+  { region: "Severní a Střední Amerika", code: "cr", name: "Kostarika", cap: "San José" },
+  { region: "Severní a Střední Amerika", code: "ni", name: "Nikaragua", cap: "Managua" },
+  { region: "Severní a Střední Amerika", code: "pa", name: "Panama", cap: "Ciudad de Panamá" },
+  { region: "Severní a Střední Amerika", code: "sv", name: "Salvador", cap: "San Salvador" },
+
+  // KARIBIK (13)
+  { region: "Karibik", code: "ag", name: "Antigua a Barbuda", cap: "Saint John's" },
+  { region: "Karibik", code: "bs", name: "Bahamy", cap: "Nassau" },
+  { region: "Karibik", code: "bb", name: "Barbados", cap: "Bridgetown" },
+  { region: "Karibik", code: "dm", name: "Dominika", cap: "Roseau" },
+  { region: "Karibik", code: "do", name: "Dominikánská republika", cap: "Santo Domingo" },
+  { region: "Karibik", code: "gd", name: "Grenada", cap: "Saint George's" },
+  { region: "Karibik", code: "ht", name: "Haiti", cap: "Port-au-Prince" },
+  { region: "Karibik", code: "jm", name: "Jamajka", cap: "Kingston" },
+  { region: "Karibik", code: "cu", name: "Kuba", cap: "Havana" },
+  { region: "Karibik", code: "lc", name: "Svatá Lucie", cap: "Castries" },
+  { region: "Karibik", code: "kn", name: "Svatý Kryštof a Nevis", cap: "Basseterre" },
+  { region: "Karibik", code: "vc", name: "Svatý Vincenc a Grenadiny", cap: "Kingstown" },
+  { region: "Karibik", code: "tt", name: "Trinidad a Tobago", cap: "Port of Spain" },
+
+  // JIŽNÍ AMERIKA (12)
+  { region: "Jižní Amerika", code: "ar", name: "Argentina", cap: "Buenos Aires" },
+  { region: "Jižní Amerika", code: "bo", name: "Bolívie", cap: "Sucre" },
+  { region: "Jižní Amerika", code: "br", name: "Brazílie", cap: "Brasília" },
+  { region: "Jižní Amerika", code: "ec", name: "Ekvádor", cap: "Quito" },
+  { region: "Jižní Amerika", code: "gy", name: "Guyana", cap: "Georgetown" },
+  { region: "Jižní Amerika", code: "cl", name: "Chile", cap: "Santiago de Chile" },
+  { region: "Jižní Amerika", code: "co", name: "Kolumbie", cap: "Bogotá" },
+  { region: "Jižní Amerika", code: "py", name: "Paraguay", cap: "Asunción" },
+  { region: "Jižní Amerika", code: "pe", name: "Peru", cap: "Lima" },
+  { region: "Jižní Amerika", code: "sr", name: "Surinam", cap: "Paramaribo" },
+  { region: "Jižní Amerika", code: "uy", name: "Uruguay", cap: "Montevideo" },
+  { region: "Jižní Amerika", code: "ve", name: "Venezuela", cap: "Caracas" },
+
+  // AUSTRÁLIE A OCEÁNIE (14)
+  { region: "Austrálie a Oceánie", code: "au", name: "Austrálie", cap: "Canberra" },
+  { region: "Austrálie a Oceánie", code: "fj", name: "Fidži", cap: "Suva" },
+  { region: "Austrálie a Oceánie", code: "ki", name: "Kiribati", cap: "Tarawa" },
+  { region: "Austrálie a Oceánie", code: "mh", name: "Marshallovy ostrovy", cap: "Majuro" },
+  { region: "Austrálie a Oceánie", code: "fm", name: "Mikronésie", cap: "Palikir" },
+  { region: "Austrálie a Oceánie", code: "nr", name: "Nauru", cap: "Yaren" },
+  { region: "Austrálie a Oceánie", code: "nz", name: "Nový Zéland", cap: "Wellington" },
+  { region: "Austrálie a Oceánie", code: "pw", name: "Palau", cap: "Ngerulmud" },
+  { region: "Austrálie a Oceánie", code: "pg", name: "Papua Nová Guinea", cap: "Port Moresby" },
+  { region: "Austrálie a Oceánie", code: "ws", name: "Samoa", cap: "Apia" },
+  { region: "Austrálie a Oceánie", code: "sb", name: "Šalamounovy ostrovy", cap: "Honiara" },
+  { region: "Austrálie a Oceánie", code: "to", name: "Tonga", cap: "Nuku'alofa" },
+  { region: "Austrálie a Oceánie", code: "tv", name: "Tuvalu", cap: "Funafuti" },
+  { region: "Austrálie a Oceánie", code: "vu", name: "Vanuatu", cap: "Port Vila" }
+];
+
+const TROPHIES = [
+  { id: "first_win", icon: "🎒", name: "První výprava", desc: "Dokonči svůj první kvíz." },
+  { id: "perfect_15", icon: "🌟", name: "Bez jediné chybičky", desc: "Získej 100 % v kvízu s alespoň 15 otázkami." },
+  { id: "streak_10", icon: "🔥", name: "Nezastavitelná série", desc: "Uhodni 10 otázek v řadě bez chyby." },
+  { id: "streak_25", icon: "⚡", name: "Bleskový mozek", desc: "Uhodni 25 otázek v řadě bez chyby." },
+  { id: "speedster", icon: "🚀", name: "Rychlík", desc: "Dokonči 15 otázek do 45 sekund s min. 80 % úspěšností." },
+  { id: "europe_master", icon: "🏰", name: "Královna Evropy", desc: "Získej alespoň 90 % v celé Evropě (44 států)." },
+  { id: "america_master", icon: "🗽", name: "Objevitelka Ameriky", desc: "Získej alespoň 90 % v Severní, Střední nebo Jižní Americe (celá oblast)." },
+  { id: "caribbean_pirate", icon: "🏴‍☠️", name: "Vládce Karibiku", desc: "Získej 100 % v celém Karibiku (13 států)." },
+  { id: "asia_master", icon: "🐉", name: "Mistr Asie", desc: "Získej alespoň 85 % v celé Asii (48 států)." },
+  { id: "africa_safari", icon: "🦁", name: "Průzkumník Afriky", desc: "Získej alespoň 85 % v celé Africe (54 států)." },
+  { id: "survivor", icon: "💖", name: "Přeživší", desc: "Uhodni alespoň 20 otázek v režimu Na 3 životy." },
+  { id: "collector_100", icon: "👑", name: "Světová znalkyně", desc: "Nasbírej celkem 100 správných odpovědí." }
+];
+
+const STORAGE_KEY = "svet_kviz_progress_v1";
+let saveData = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null") || {
+  totalCorrect: 0,
+  bestStreak: 0,
+  unlocked: [],
+  records: {}
+};
+
+function persist() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
+  updateHomeStats();
+}
+
+function updateHomeStats() {
+  document.getElementById("stat-total").textContent = saveData.totalCorrect;
+  document.getElementById("stat-streak").textContent = `${saveData.bestStreak} 🔥`;
+  document.getElementById("stat-trophies").textContent = `${saveData.unlocked.length} / ${TROPHIES.length}`;
+}
+
+const PRAISES = ["Výborně! 🌟", "Super! 🎉", "Správně! 👏", "Paráda! 🚀", "Bravo! 🏆", "Bomba! ✨"];
+let selectedMode = "mix";
+let selectedRegion = "ALL";
+let selectedCount = "15";
+let questions = [];
+let idx = 0;
+let score = 0;
+let currentStreak = 0;
+let maxGameStreak = 0;
+let lives = 3;
+let isSurvival = false;
+let mistakes = [];
+let startTime = 0;
+let answered = false;
+
+function bindPills(groupId, setter) {
+  document.querySelectorAll(`#${groupId} .pill`).forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll(`#${groupId} .pill`).forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      setter(btn.dataset.val);
+    };
+  });
+}
+
+bindPills("mode-group", val => selectedMode = val);
+bindPills("region-group", val => selectedRegion = val);
+bindPills("count-group", val => selectedCount = val);
+
+function shuffle(arr) {
+  return [...arr].sort(() => Math.random() - 0.5);
+}
+
+function startQuiz() {
+  let pool = selectedRegion === "ALL" ? COUNTRIES : COUNTRIES.filter(c => c.region === selectedRegion);
+  pool = shuffle(pool);
+  isSurvival = selectedCount === "SURVIVAL";
+
+  if (!isSurvival && selectedCount !== "MAX") {
+    pool = pool.slice(0, Number(selectedCount));
+  }
+
+  questions = pool.map(c => {
+    const qType = selectedMode === "mix" ? (Math.random() < 0.5 ? "capitals" : "flags") : selectedMode;
+    const sameRegionOthers = COUNTRIES.filter(x => x.code !== c.code && x.region === c.region);
+    const distractors = shuffle(sameRegionOthers).slice(0, 2);
+
+    let options, correct;
+    if (qType === "capitals") {
+      correct = c.cap;
+      options = shuffle([c.cap, ...distractors.map(d => d.cap)]);
+    } else {
+      correct = c.name;
+      options = shuffle([c.name, ...distractors.map(d => d.name)]);
+    }
+    return { country: c, qType, options, correct };
+  });
+
+  idx = 0; score = 0; currentStreak = 0; maxGameStreak = 0; lives = 3; mistakes = []; startTime = Date.now();
+  document.getElementById("screen-start").classList.add("hidden");
+  document.getElementById("screen-end").classList.add("hidden");
+  document.getElementById("screen-trophies").classList.add("hidden");
+  document.getElementById("screen-quiz").classList.remove("hidden");
+
+  const livesEl = document.getElementById("q-lives");
+  if (isSurvival) {
+    livesEl.classList.remove("hidden");
+    livesEl.textContent = "❤️❤️❤️";
+  } else {
+    livesEl.classList.add("hidden");
+  }
+
+  renderQuestion();
+}
+
+function renderQuestion() {
+  answered = false;
+  const q = questions[idx];
+  document.getElementById("q-region").textContent = "📍 " + q.country.region;
+  document.getElementById("q-counter").textContent = `${idx + 1} / ${questions.length}`;
+  document.getElementById("q-score").textContent = `Skóre: ${score}`;
+  document.getElementById("q-streak").textContent = `🔥 ${currentStreak}`;
+  document.getElementById("progress-fill").style.width = `${(idx / questions.length) * 100}%`;
+  document.getElementById("feedback").textContent = "";
+  document.getElementById("next-btn").classList.add("hidden");
+
+  const flagImg = document.getElementById("q-flag");
+  flagImg.src = `https://flagcdn.com/w320/${q.country.code}.png`;
+
+  if (q.qType === "capitals") {
+    document.getElementById("q-prompt").textContent = "Jaké je hlavní město tohoto státu?";
+    document.getElementById("q-target").textContent = q.country.name;
+  } else {
+    document.getElementById("q-prompt").textContent = "Kterému státu patří tato vlajka?";
+    document.getElementById("q-target").textContent = "❓";
+  }
+
+  const box = document.getElementById("answers-box");
+  box.innerHTML = "";
+  const letters = ["A", "B", "C"];
+  q.options.forEach((opt, i) => {
+    const btn = document.createElement("button");
+    btn.className = "ans-btn";
+    btn.innerHTML = `<span class="letter">${letters[i]}</span><span>${opt}</span>`;
+    btn.onclick = () => checkAnswer(btn, opt);
+    box.appendChild(btn);
+  });
+}
+
+function checkAnswer(clickedBtn, choice) {
+  if (answered) return;
+  answered = true;
+  const q = questions[idx];
+  const allBtns = document.querySelectorAll(".ans-btn");
+  allBtns.forEach(b => b.disabled = true);
+
+  const fb = document.getElementById("feedback");
+  if (choice === q.correct) {
+    score++;
+    currentStreak++;
+    saveData.totalCorrect++;
+    if (currentStreak > maxGameStreak) maxGameStreak = currentStreak;
+    if (currentStreak > saveData.bestStreak) saveData.bestStreak = currentStreak;
+
+    clickedBtn.classList.add("correct");
+    fb.style.color = "#4ade80";
+    fb.textContent = PRAISES[Math.floor(Math.random() * PRAISES.length)];
+  } else {
+    currentStreak = 0;
+    clickedBtn.classList.add("wrong");
+    allBtns.forEach(b => {
+      if (b.querySelector("span:last-child").textContent === q.correct) b.classList.add("correct");
+    });
+    fb.style.color = "#f87171";
+    fb.textContent = `Správná odpověď: ${q.correct}`;
+    mistakes.push(q);
+
+    if (isSurvival) {
+      lives--;
+      document.getElementById("q-lives").textContent = "❤️".repeat(Math.max(0, lives)) + "🖤".repeat(3 - Math.max(0, lives));
+    }
+  }
+
+  persist();
+  document.getElementById("q-score").textContent = `Skóre: ${score}`;
+  document.getElementById("q-streak").textContent = `🔥 ${currentStreak}`;
+  document.getElementById("next-btn").classList.remove("hidden");
+}
+
+function nextQuestion() {
+  if (isSurvival && lives <= 0) {
+    endQuiz(true);
+    return;
+  }
+  idx++;
+  if (idx < questions.length) {
+    renderQuestion();
+  } else {
+    endQuiz(false);
+  }
+}
+
+function launchConfetti() {
+  const colors = ["#f59e0b", "#3b82f6", "#10b981", "#ec4899", "#8b5cf6", "#facc15"];
+  for (let i = 0; i < 65; i++) {
+    const el = document.createElement("div");
+    el.className = "confetti";
+    el.style.left = Math.random() * 100 + "vw";
+    el.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+    el.style.animationDuration = (Math.random() * 1.8 + 1.8) + "s";
+    el.style.width = (Math.random() * 8 + 6) + "px";
+    el.style.height = (Math.random() * 8 + 6) + "px";
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 3800);
+  }
+}
+
+function endQuiz(diedInSurvival) {
+  document.getElementById("progress-fill").style.width = "100%";
+  document.getElementById("screen-quiz").classList.add("hidden");
+  document.getElementById("screen-end").classList.remove("hidden");
+
+  const answeredCount = diedInSurvival ? idx + 1 : questions.length;
+  const sec = Math.floor((Date.now() - startTime) / 1000);
+  const mins = String(Math.floor(sec / 60)).padStart(2, "0");
+  const remSec = String(sec % 60).padStart(2, "0");
+  const pct = Math.round((score / answeredCount) * 100);
+
+  document.getElementById("end-title").textContent = diedInSurvival ? "💔 Došly životy!" : "🏆 Konec kvízu!";
+  document.getElementById("final-score").textContent = isSurvival ? `${score} bodů` : `${score} / ${questions.length}`;
+  document.getElementById("final-meta").textContent = `Úspěšnost: ${pct} %  •  Čas: ${mins}:${remSec}  •  Nejlepší série: ${maxGameStreak} 🔥`;
+
+  // Kontrola osobního rekordu
+  const recKey = `${selectedRegion}_${selectedCount}`;
+  const prevBest = saveData.records[recKey] || 0;
+  const recBanner = document.getElementById("record-banner");
+  if (score > prevBest && score > 0) {
+    saveData.records[recKey] = score;
+    recBanner.classList.remove("hidden");
+  } else {
+    recBanner.classList.add("hidden");
+  }
+
+  // Vyhodnocení trofejí
+  const newlyUnlocked = [];
+  const tryUnlock = (id, cond) => {
+    if (cond && !saveData.unlocked.includes(id)) {
+      saveData.unlocked.push(id);
+      newlyUnlocked.push(TROPHIES.find(t => t.id === id));
+    }
+  };
+
+  tryUnlock("first_win", score >= 1);
+  tryUnlock("perfect_15", !isSurvival && questions.length >= 15 && pct === 100);
+  tryUnlock("streak_10", maxGameStreak >= 10);
+  tryUnlock("streak_25", maxGameStreak >= 25);
+  tryUnlock("speedster", !isSurvival && questions.length >= 15 && sec <= 45 && pct >= 80);
+  tryUnlock("europe_master", selectedRegion === "Evropa" && selectedCount === "MAX" && pct >= 90);
+  tryUnlock("america_master", ["Severní a Střední Amerika", "Jižní Amerika"].includes(selectedRegion) && selectedCount === "MAX" && pct >= 90);
+  tryUnlock("caribbean_pirate", selectedRegion === "Karibik" && selectedCount === "MAX" && pct === 100);
+  tryUnlock("asia_master", selectedRegion === "Asie" && selectedCount === "MAX" && pct >= 85);
+  tryUnlock("africa_safari", selectedRegion === "Afrika" && selectedCount === "MAX" && pct >= 85);
+  tryUnlock("survivor", isSurvival && score >= 20);
+  tryUnlock("collector_100", saveData.totalCorrect >= 100);
+
+  persist();
+
+  const unlockedBox = document.getElementById("unlocked-box");
+  const unlockedList = document.getElementById("unlocked-list");
+  if (newlyUnlocked.length > 0) {
+    unlockedBox.classList.remove("hidden");
+    unlockedList.innerHTML = newlyUnlocked.map(t => `
+      <div style="display:flex; align-items:center; gap:10px; margin-top:6px;">
+        <span style="font-size:1.6rem;">${t.icon}</span>
+        <div><strong>${t.name}</strong> — <span style="color:#cbd5e1; font-size:0.9rem;">${t.desc}</span></div>
+      </div>
+    `).join("");
+    launchConfetti();
+  } else {
+    unlockedBox.classList.add("hidden");
+    if (pct === 100) launchConfetti();
+  }
+
+  const wrap = document.getElementById("mistakes-wrap");
+  const list = document.getElementById("mistakes-list");
+  if (mistakes.length > 0) {
+    wrap.classList.remove("hidden");
+    list.innerHTML = mistakes.map(m => `
+      <div class="mistake-item">
+        <img class="mini-flag" src="https://flagcdn.com/w80/${m.country.code}.png" alt="">
+        <span><strong>${m.country.name}</strong> — hlavní město: <strong>${m.country.cap}</strong></span>
+      </div>
+    `).join("");
+  } else {
+    wrap.classList.add("hidden");
+  }
+}
+
+function openTrophies() {
+  document.getElementById("screen-start").classList.add("hidden");
+  document.getElementById("screen-end").classList.add("hidden");
+  document.getElementById("screen-trophies").classList.remove("hidden");
+  document.getElementById("trophy-progress-txt").textContent = `Odemčeno ${saveData.unlocked.length} z ${TROPHIES.length} odznaků`;
+
+  const grid = document.getElementById("trophies-grid");
+  grid.innerHTML = TROPHIES.map(t => {
+    const isUnlocked = saveData.unlocked.includes(t.id);
+    return `
+      <div class="trophy-card ${isUnlocked ? "unlocked" : "locked"}">
+        <div class="trophy-icon">${isUnlocked ? t.icon : "🔒"}</div>
+        <div>
+          <div class="trophy-name">${t.name}</div>
+          <div class="trophy-desc">${t.desc}</div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function resetToMenu() {
+  document.getElementById("screen-end").classList.add("hidden");
+  document.getElementById("screen-trophies").classList.add("hidden");
+  document.getElementById("screen-start").classList.remove("hidden");
+  updateHomeStats();
+}
+
+updateHomeStats();
+</script>
+</body>
+</html>
